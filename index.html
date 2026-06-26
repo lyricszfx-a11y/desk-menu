@@ -1,58 +1,49 @@
 <script>
+const key = 'baronServiceRequests';
+const menuKey = 'baronMenu';
 
-const key='baronServiceRequests';
-const menuKey='baronMenu';
-const board=document.getElementById('board');
-const doneBoard=document.getElementById('doneBoard');
-const filter=document.getElementById('filter');
+const board = document.getElementById('board');
+const doneBoard = document.getElementById('doneBoard');
+const filter = document.getElementById('filter');
 
-/* =========================
-   GOOGLE SHEETS CONNECTION
-========================= */
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz6sDvkbl77tkeU2YuNrV-gk_VRm_zdAurbB_8x6vwhpVS0IQKrH23jM6LiuRWzqbghyg/exec";
 
 /* =========================
-   SEND TO GOOGLE SHEETS
+   GOOGLE SHEETS SEND
 ========================= */
 function sendToSheet(order){
   fetch(SHEET_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify(order)
   })
-  .then(res => res.text())
-  .then(data => console.log("Sent:", data))
-  .catch(err => console.log("Sheet error:", err));
+  .then(r => r.text())
+  .then(d => console.log("Sent:", d))
+  .catch(e => console.log("Sheet error:", e));
 }
 
 /* =========================
-   YOUR EXISTING STORAGE
+   STORAGE
 ========================= */
 function requests(){
-  return JSON.parse(localStorage.getItem(key)||'[]');
+  return JSON.parse(localStorage.getItem(key) || '[]');
 }
 
 function save(list){
   localStorage.setItem(key, JSON.stringify(list));
 }
 
-function menu(){
-  return JSON.parse(localStorage.getItem(menuKey)||'null')||[];
-}
-
 /* =========================
-   SOUND SYSTEM (UNCHANGED SAFE)
+   SOUND SYSTEM
 ========================= */
-let soundEnabled=false;
-let audioCtx=null;
+let soundEnabled = false;
+let audioCtx = null;
 
 function enableSound(){
   try{
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.resume();
-    soundEnabled=true;
+    soundEnabled = true;
     alert("Sound Enabled");
   }catch(e){
     alert("Sound not supported");
@@ -60,67 +51,70 @@ function enableSound(){
 }
 
 function playAlert(){
-  if(!soundEnabled||!audioCtx)return;
+  if(!soundEnabled || !audioCtx) return;
 
-  let now=audioCtx.currentTime;
+  let now = audioCtx.currentTime;
 
   [0,0.2,0.4].forEach(offset=>{
-    let osc=audioCtx.createOscillator();
-    let gain=audioCtx.createGain();
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
 
-    osc.type='sine';
-    osc.frequency.setValueAtTime(880, now+offset);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now + offset);
 
-    gain.gain.setValueAtTime(0.0001, now+offset);
-    gain.gain.exponentialRampToValueAtTime(0.2, now+offset+0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now+offset+0.2);
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.2);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    osc.start(now+offset);
-    osc.stop(now+offset+0.25);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.25);
   });
 }
 
 /* =========================
-   CREATE REQUEST (LOCAL + SHEETS)
+   CREATE REQUEST
 ========================= */
 function createRequest(req){
-
-  // SAVE LOCALLY
   let list = requests();
   list.unshift(req);
   save(list);
 
-  // SEND TO GOOGLE SHEETS
   sendToSheet(req);
-
-  // ALERT
   playAlert();
-
   render();
 }
 
 /* =========================
-   RENDER BOARD (YOUR SYSTEM)
+   RENDER BOARD
 ========================= */
 function render(){
   let list = requests();
 
-  board.innerHTML = list
-    .filter(r => r.status !== "Done")
-    .map(r => `
-      <div class="ticket">
-        <h3>${r.type}</h3>
-        <p>${r.details?.message || ""}</p>
-        <small>${r.time}</small>
-      </div>
-    `).join('');
+  if(!board) return;
+
+  board.innerHTML = list.length ? list.map(r => `
+    <div class="ticket">
+      <h3>${r.type}</h3>
+      <p>${r.details?.message || ""}</p>
+      <small>${r.time}</small>
+    </div>
+  `).join('') : "<p>No requests yet</p>";
 }
 
 /* =========================
-   TEST BUTTON
+   AUTO SYNC (IMPORTANT FIX)
+========================= */
+setInterval(render, 3000);
+
+window.addEventListener('storage', (e)=>{
+  if(e.key === key) render();
+});
+
+/* =========================
+   BUTTONS
 ========================= */
 document.getElementById('seed')?.addEventListener('click', ()=>{
   createRequest({
@@ -135,14 +129,11 @@ document.getElementById('seed')?.addEventListener('click', ()=>{
   });
 });
 
-/* =========================
-   ENABLE SOUND BUTTON
-========================= */
-document.getElementById('enableSound')?.addEventListener('click', enableSound);
+document.getElementById('enableSound')
+?.addEventListener('click', enableSound);
 
 /* =========================
    INITIAL LOAD
 ========================= */
 render();
-
 </script>
