@@ -45,14 +45,114 @@
     document.getElementById('managerMenuList').addEventListener('click',e=>{let b=e.target.closest('[data-toggle]');if(!b)return;let list=menu();let item=list[Number(b.dataset.toggle)];item.available=!item.available;saveMenu(list);renderManagerMenu()});
     window.addEventListener('storage',e=>{if(e.key===key)render();if(e.key===menuKey)renderManagerMenu()});if(channel)channel.onmessage=e=>{playAlert();render(e.data&&e.data.id)};render();setInterval(render,5000);
   </script>
- function sendOrder(item, table) {
-  fetch("https://script.google.com/macros/s/AKfycbzn5eidE-dn4BalkbHP0JjCd8WumuX0iwxnRcqIZZGbde15djKHthMLlmKoiP7arrj9qg/exec", {
+<script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbzn5eidE-dn4BalkbHP0JjCd8WumuX0iwxnRcqIZZGbde15djKHthMLlmKoiP7arrj9qg/exec";
+
+let soundEnabled = false;
+let audioCtx = null;
+
+/* =========================
+   SEND ORDER TO GOOGLE SHEET
+========================= */
+function sendToSheet(order){
+  fetch(SHEET_URL, {
     method: "POST",
-    body: JSON.stringify({
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(order)
+  }).catch(err => console.log("Send error:", err));
+}
+
+/* =========================
+   MAIN ORDER FUNCTION
+========================= */
+function sendOrder(item, table){
+
+  let order = {
+    id: "BRN-" + Date.now(),
+    type: "Contactless Order",
+    status: "New",
+    time: new Date().toLocaleString(),
+    details: {
       item: item,
       table: table
-    })
+    }
+  };
+
+  sendToSheet(order);
+  playAlert();
+
+  alert("Order sent successfully!");
+}
+
+/* =========================
+   SOUND SYSTEM
+========================= */
+function enableSound(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+    soundEnabled = true;
+
+    let note = document.getElementById('soundNote');
+    if(note){
+      note.innerHTML = '<span class="sound-on">Sound is ON</span>';
+    }
+
+  }catch(e){
+    alert("Sound not supported in this browser.");
+  }
+}
+
+function playAlert(){
+  if(!soundEnabled || !audioCtx) return;
+
+  let now = audioCtx.currentTime;
+
+  [0,0.18,0.36].forEach(offset=>{
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now + offset);
+
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.15);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.2);
   });
 }
+
+/* =========================
+   TEST BUTTON (SAFE)
+========================= */
+document.getElementById('seed')?.addEventListener('click', ()=>{
+  let req = {
+    id: "BRN-" + Date.now(),
+    type: "Call Waiter",
+    status: "New",
+    time: new Date().toLocaleString(),
+    details: {
+      table: "Test 1",
+      message: "Test waiter call"
+    }
+  };
+
+  sendToSheet(req);
+  playAlert();
+});
+
+/* =========================
+   ENABLE SOUND BUTTON (SAFE)
+========================= */
+document.getElementById('enableSound')?.addEventListener('click', enableSound);
+
+</script>
 </body>
 </html>
