@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <a href="https://lyricszfx-a11y.github.io/harla/" class="home-btn">
-   Back to Home
-</a>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Baron Hotel Service Desk</title>
@@ -48,5 +45,14 @@
     document.getElementById('managerMenuList').addEventListener('click',e=>{let b=e.target.closest('[data-toggle]');if(!b)return;let list=menu();let item=list[Number(b.dataset.toggle)];item.available=!item.available;saveMenu(list);renderManagerMenu()});
     window.addEventListener('storage',e=>{if(e.key===key)render();if(e.key===menuKey)renderManagerMenu()});if(channel)channel.onmessage=e=>{playAlert();render(e.data&&e.data.id)};render();setInterval(render,5000);
   </script>
+ function sendOrder(item, table) {
+  fetch("https://script.google.com/macros/s/AKfycbzn5eidE-dn4BalkbHP0JjCd8WumuX0iwxnRcqIZZGbde15djKHthMLlmKoiP7arrj9qg/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      item: item,
+      table: table
+    })
+  });
+}
 </body>
 </html>
